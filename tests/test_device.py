@@ -430,6 +430,8 @@ async def test_set_properties_timeout(cipher, send):
     with pytest.raises(DeviceTimeoutError):
         await device.push_state_update()
 
+    assert len(device._dirty)
+
 
 @pytest.mark.asyncio
 async def test_uninitialized_properties(cipher, send):
