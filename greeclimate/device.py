@@ -2,6 +2,7 @@ import asyncio
 import enum
 import logging
 import re
+import typing
 from asyncio import AbstractEventLoop
 from enum import IntEnum, unique
 from typing import Union
@@ -548,8 +549,9 @@ class Device(DeviceProtocol2, Taskable):
         self.set_property(Props.POWER_SAVE, int(value))
 
     @property
-    def target_humidity(self) -> int:
-        15 + (self.get_property(Props.HUM_SET) * 5)
+    def target_humidity(self) -> typing.Optional[int]:
+        value = self.get_property(Props.HUM_SET)
+        return (15 + value * 5) if value is not None else None
 
     @target_humidity.setter
     def target_humidity(self, value: int):
