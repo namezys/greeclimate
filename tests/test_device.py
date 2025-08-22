@@ -761,3 +761,27 @@ async def test_disable_beep(cipher, send):
     assert set(send.call_args_list[0].args[0]['pack']['opt']) == {'Pow'}
 
     assert device.beep
+
+
+@pytest.mark.asyncio
+async def test_auto_xfan(cipher, send):
+    """Check that auto xfan send xfan command."""
+    device = await generate_device_mock_async()
+
+    device.power = True
+    device.auto_xfan = True
+    await device.push_state_update()
+    assert send.call_count == 1
+    assert list(send.call_args_list[0].args[0]['pack']['opt']) == ['Pow', 'Blo']
+
+    assert device.auto_xfan
+
+    send.reset_mock()
+
+    device.power = False
+    device.auto_xfan = False
+    await device.push_state_update()
+    assert send.call_count == 1
+    assert set(send.call_args_list[0].args[0]['pack']['opt']) == {'Pow'}
+
+    assert not device.auto_xfan
