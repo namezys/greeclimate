@@ -154,6 +154,8 @@ class Device(DeviceProtocol2, Taskable):
         current_humidity: The current relative humidity
         clean_filter: A bool to indicate the filter needs cleaning
         water_full: A bool to indicate the water tank is full
+        beep: A boolean to enable beep on any operation
+        auto_xfan: A boolean to enable automatic xfan mode for cool
     """
 
     def __init__(self, device_info: DeviceInfo, timeout: int = 120, bind_timeout: int = 10, loop: AbstractEventLoop = None):
@@ -179,7 +181,8 @@ class Device(DeviceProtocol2, Taskable):
         self.check_version = True
         self._properties = {}
         self._dirty = []
-        self._beep = False
+        self._beep = True
+        self._auto_xfan = False
 
     async def bind(
         self,
@@ -318,6 +321,10 @@ class Device(DeviceProtocol2, Taskable):
         if not self.device_cipher:
             await self.bind()
 
+        if self._auto_xfan:
+            self._logger.debug("Set XFAN because of auto XFAN")
+            self.xfan = True
+
         self._logger.debug("Pushing state updates to (%s)", str(self.device_info))
 
         props = {}
@@ -332,8 +339,12 @@ class Device(DeviceProtocol2, Taskable):
                 )
 
         if not self._beep:
-            self._logger.debug("Disable nuzzer")
+            self._logger.debug("Disable buzzer")
             props["Buzzer_ON_OFF"] = 1
+
+        if self.auto_xfan:
+            self._logger.debug("Force XFAN")
+            props[Props.XFAN.value] = True
 
         try:
             await self.send(self.create_command_message(self.device_info, **props))
@@ -585,3 +596,11 @@ class Device(DeviceProtocol2, Taskable):
     @beep.setter
     def beep(self, value: bool):
         self._beep = bool(value)
+
+    @property
+    def auto_xfan(self) -> bool:
+        return self._auto_xfan
+
+    @auto_xfan.setter
+    def auto_xfan(self, value: bool):
+        self._auto_xfan = bool(value)
