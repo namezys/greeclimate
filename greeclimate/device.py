@@ -321,10 +321,6 @@ class Device(DeviceProtocol2, Taskable):
         if not self.device_cipher:
             await self.bind()
 
-        if self._auto_xfan:
-            self._logger.debug("Set XFAN because of auto XFAN")
-            self.xfan = True
-
         self._logger.debug("Pushing state updates to (%s)", str(self.device_info))
 
         props = {}
@@ -344,7 +340,7 @@ class Device(DeviceProtocol2, Taskable):
 
         if self.auto_xfan:
             self._logger.debug("Force XFAN")
-            props[Props.XFAN.value] = True
+            props[Props.XFAN.value] = 1
 
         try:
             await self.send(self.create_command_message(self.device_info, **props))
