@@ -4,7 +4,7 @@ import enum
 import pytest
 
 from greeclimate.cipher import CipherV1
-from greeclimate.device import Device, DeviceInfo, Props, TemperatureUnits
+from greeclimate.device import Device, DeviceInfo, Mode, Props, TemperatureUnits
 from greeclimate.exceptions import DeviceNotBoundError, DeviceTimeoutError
 
 
@@ -160,6 +160,13 @@ async def generate_device_mock_async():
     d = Device(DeviceInfo("1.1.1.1", 7000, "f4911e7aca59", "1e7aca59"))
     await d.bind(key="St8Vw1Yz4Bc7Ef0H", cipher=CipherV1())
     return d
+
+
+def get_sent_command_properties(send, call_index: int = -1) -> dict[str, object]:
+    command = send.call_args_list[call_index].args[0]
+    options = command["pack"]["opt"]
+    values = command["pack"]["p"]
+    return dict(zip(options, values))
 
 
 def test_device_info_equality(send):
@@ -436,6 +443,45 @@ async def test_set_properties_timeout(cipher, send):
         await device.push_state_update()
 
     assert len(device._dirty)
+
+
+@pytest.mark.asyncio
+async def test_buzzer_is_enabled_by_default(send):
+    device = Device(DeviceInfo(*get_mock_info()))
+
+    assert device.buzzer is True
+
+
+@pytest.mark.asyncio
+async def test_buzzer_disable_flag_is_sent_with_every_command_when_disabled(cipher, send):
+    device = await generate_device_mock_async()
+    device.buzzer = False
+
+    device.power = True
+    await device.push_state_update()
+
+    first_command_properties = get_sent_command_properties(send)
+    assert first_command_properties["Buzzer_ON_OFF"] == 1
+    assert first_command_properties[Props.POWER.value] == 1
+
+    device.mode = Mode.Cool
+    await device.push_state_update()
+
+    second_command_properties = get_sent_command_properties(send)
+    assert second_command_properties["Buzzer_ON_OFF"] == 1
+    assert second_command_properties[Props.MODE.value] == Mode.Cool
+
+
+@pytest.mark.asyncio
+async def test_buzzer_disable_flag_is_not_sent_when_enabled(cipher, send):
+    device = await generate_device_mock_async()
+    device.buzzer = True
+    device.power = True
+
+    await device.push_state_update()
+
+    command_properties = get_sent_command_properties(send)
+    assert "Buzzer_ON_OFF" not in command_properties
 
 
 @pytest.mark.asyncio

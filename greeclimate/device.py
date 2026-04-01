@@ -2,7 +2,6 @@ import asyncio
 import enum
 import logging
 import re
-import typing
 from asyncio import AbstractEventLoop
 from enum import IntEnum, unique
 from typing import Union, Optional, Any
@@ -170,15 +169,16 @@ class Device(DeviceProtocol2, Taskable):
         Taskable.__init__(self, loop)
         self._logger = logging.getLogger(__name__)
         self.device_info: DeviceInfo = device_info
-        
+
         self._bind_timeout = bind_timeout
-        
+
         """ Device properties """
         self.hid = None
         self.version = None
         self.check_version = True
         self._properties = {}
         self._dirty = []
+        self._buzzer = True
 
         self._valid_state: asyncio.Event = asyncio.Event()
         self._valid_state.clear()
@@ -330,6 +330,10 @@ class Device(DeviceProtocol2, Taskable):
                 props[Props.TEMP_UNIT.value] = self._properties.get(
                     Props.TEMP_UNIT.value
                 )
+
+        if not self._buzzer:
+            self._logger.debug("Sending buzzer disable flag")
+            props["Buzzer_ON_OFF"] = 1
 
         try:
             await self.send(self.create_command_message(self.device_info, **props))
@@ -591,3 +595,11 @@ class Device(DeviceProtocol2, Taskable):
     def water_full(self) -> Optional[bool]:
         prop = self.get_property(Props.WATER_FULL)
         return bool(prop) if prop is not None else None
+
+    @property
+    def buzzer(self) -> bool:
+        return self._buzzer
+
+    @buzzer.setter
+    def buzzer(self, value: bool):
+        self._buzzer = bool(value)
